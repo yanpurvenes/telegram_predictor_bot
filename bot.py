@@ -189,7 +189,6 @@ async def daily_prediction_job(context: CallbackContext):
     print("Ежедневная рассылка завершена.")
 
 async def store_user_from_channel_message(update: Update, context: CallbackContext):
-    # САМЫЙ ПЕРВЫЙ ЛОГ В ФУНКЦИИ
     print(f"--- store_user_from_channel_message ВЫЗВАНА для чата {update.message.chat_id if update.message else 'нет сообщения'} ---")
 
     if not update.message or not update.message.from_user or not TARGET_CHANNEL_ID:
@@ -231,18 +230,24 @@ async def store_user_from_channel_message(update: Update, context: CallbackConte
 
 async def start_command(update: Update, context: CallbackContext):
     user = update.effective_user
+    print(f"!!! ПОЛУЧЕНА КОМАНДА /start от пользователя {user.id} ({user.first_name}) в ЛС !!!")
     await update.message.reply_text(
         f"Привет, {user.first_name}! Я бот предсказаний для канала (ID: {TARGET_CHANNEL_ID}).\n"
         f"Предсказания отправляются активным участникам этого канала ежедневно в {SCHEDULE_HOUR:02d}:{SCHEDULE_MINUTE:02d} МСК.\n"
         "Чтобы получать предсказания, просто будьте участником указанного канала и проявляйте там активность (пишите сообщения). "
         "Ваши данные (ID, имя, юзернейм) будут сохранены для этой цели."
     )
+    print(f"!!! Ответ на /start отправлен пользователю {user.id} !!!")
+
 
 async def help_command(update: Update, context: CallbackContext):
+    user = update.effective_user
+    print(f"!!! ПОЛУЧЕНА КОМАНДА /help от пользователя {user.id} ({user.first_name}) в ЛС !!!")
     help_text = (
         "Я бот для отправки ежедневных предсказаний в канал.\n"
         "Предсказания получают пользователи, которые пишут сообщения в целевом канале.\n\n"
         "Команды (в личных сообщениях со мной):\n"
+        "/ping - Проверить, что я жив.\n"
         "/start - Информация о боте.\n"
         "/help - Показать это сообщение.\n"
     )
@@ -253,11 +258,15 @@ async def help_command(update: Update, context: CallbackContext):
             "/force_send - Принудительно запустить рассылку (для теста).\n"
         )
     await update.message.reply_text(help_text)
+    print(f"!!! Ответ на /help отправлен пользователю {user.id} !!!")
+
 
 async def list_users_command(update: Update, context: CallbackContext):
     user = update.effective_user
+    print(f"!!! ПОЛУЧЕНА КОМАНДА /list_users от пользователя {user.id} ({user.first_name}) в ЛС !!!")
     if not (ADMIN_USER_ID and user and user.id == ADMIN_USER_ID):
         await update.message.reply_text("Эта команда доступна только администратору бота.")
+        print(f"!!! Пользователю {user.id} отказано в доступе к /list_users !!!")
         return
 
     load_known_users()
@@ -266,18 +275,22 @@ async def list_users_command(update: Update, context: CallbackContext):
         return
 
     message = "Пользователи, для которых будут отправляться предсказания (из known_users.json):\n"
-    for user_id, info in known_users_data.items():
-        name = f"@{info['username']}" if info.get('username') else info.get('first_name', f'User {user_id}')
-        message += f"- {name} (ID: {user_id})\n"
+    for user_id_key, info in known_users_data.items(): # Используем user_id_key как ключ словаря
+        name = f"@{info['username']}" if info.get('username') else info.get('first_name', f'User {info["id"]}')
+        message += f"- {name} (ID: {info['id']})\n" # Берем info['id'] для отображения
     
     max_len = 4096
     for i in range(0, len(message), max_len):
         await update.message.reply_text(message[i:i+max_len])
+    print(f"!!! Список пользователей отправлен администратору {user.id} !!!")
+
 
 async def force_send_command(update: Update, context: CallbackContext):
     user = update.effective_user
+    print(f"!!! ПОЛУЧЕНА КОМАНДА /force_send от пользователя {user.id} ({user.first_name}) в ЛС !!!")
     if not (ADMIN_USER_ID and user and user.id == ADMIN_USER_ID):
         await update.message.reply_text("Эта команда доступна только администратору бота.")
+        print(f"!!! Пользователю {user.id} отказано в доступе к /force_send !!!")
         return
     
     if not TARGET_CHANNEL_ID:
@@ -285,6 +298,7 @@ async def force_send_command(update: Update, context: CallbackContext):
         return
 
     await update.message.reply_text("Принудительный запуск рассылки предсказаний...")
+    print(f"!!! Администратор {user.id} запустил /force_send !!!")
     await daily_prediction_job(context)
 
 async def error_handler(update: object, context: CallbackContext) -> None:
@@ -304,6 +318,15 @@ async def error_handler(update: object, context: CallbackContext) -> None:
         except Exception as e:
             print(f"Не удалось отправить сообщение об ошибке администратору (обработка ошибки): {e}")
 
+# === НОВЫЙ ОБРАБОТЧИК ДЛЯ /ping В ЛС ===
+async def ping_command(update: Update, context: CallbackContext):
+    """Отвечает на команду /ping в личных сообщениях."""
+    user = update.effective_user
+    print(f"!!! ПОЛУЧЕНА КОМАНДА /ping от пользователя {user.id} ({user.first_name}) в ЛС !!!")
+    await update.message.reply_text(f"Pong! Привет, {user.first_name}! Я жив.")
+    print(f"!!! Ответ на /ping отправлен пользователю {user.id} !!!")
+# === КОНЕЦ НОВОГО ОБРАБОТЧИКА ===
+
 def main():
     print("Запуск main функции...")
     if not TELEGRAM_BOT_TOKEN or not TARGET_CHANNEL_ID_STR:
@@ -317,10 +340,18 @@ def main():
     print("Создание экземпляра Application...")
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
+    # --- РЕГИСТРАЦИЯ ОБРАБОТЧИКОВ ---
+    # Сначала обработчик для /ping в ЛС
+    application.add_handler(CommandHandler("ping", ping_command)) # Фильтры не нужны, по умолчанию для ЛС
+    print("Добавлен обработчик /ping для личных сообщений.")
+
+    # Затем остальные команды для ЛС
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("list_users", list_users_command))
     application.add_handler(CommandHandler("force_send", force_send_command))
+    print("Добавлены обработчики /start, /help, /list_users, /force_send.")
+
 
     if TARGET_CHANNEL_ID:
         # ОБРАБОТЧИК ОБЫЧНЫХ СООБЩЕНИЙ ИЗ ЦЕЛЕВОГО КАНАЛА/ГРУППЫ
@@ -332,9 +363,14 @@ def main():
 
         # ТЕСТОВЫЙ ОБРАБОТЧИК КОМАНДЫ ДЛЯ КАНАЛА/ГРУППЫ
         async def test_channel_command(update: Update, context: CallbackContext):
-            print(f"!!! ПОЛУЧЕНА КОМАНДА /testchannel В ЧАТЕ {update.message.chat_id} ОТ ПОЛЬЗОВАТЕЛЯ {update.message.from_user.id if update.message.from_user else 'Неизвестно'} !!!")
+            user_obj = update.message.from_user
+            user_id_str = str(user_obj.id) if user_obj else "Неизвестно"
+            print(f"!!! ПОЛУЧЕНА КОМАНДА /testchannel В ЧАТЕ {update.message.chat_id} ОТ ПОЛЬЗОВАТЕЛЯ {user_id_str} !!!")
             try:
-                await update.message.reply_text(f"Тестовая команда из чата {update.message.chat_id} получена! ID пользователя: {update.message.from_user.id}")
+                reply_text = f"Тестовая команда из чата {update.message.chat_id} получена!"
+                if user_obj:
+                    reply_text += f" ID пользователя: {user_obj.id}"
+                await update.message.reply_text(reply_text)
                 print(f"!!! Ответ на /testchannel отправлен в чат {update.message.chat_id} !!!")
             except Exception as e:
                 print(f"!!! Ошибка при ответе на /testchannel в чате {update.message.chat_id}: {e} !!!")
