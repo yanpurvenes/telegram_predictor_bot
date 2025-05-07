@@ -358,6 +358,33 @@ def main():
 
     # Запуск бота
     print("Запуск бота (polling)...")
+# ... (другие обработчики команд list_users, force_send)
+
+        # ТЕСТОВЫЙ ОБРАБОТЧИК КОМАНДЫ ДЛЯ КАНАЛА
+        async def test_channel_command(update: Update, context: CallbackContext):
+            print(f"!!! ПОЛУЧЕНА КОМАНДА /testchannel В ЧАТЕ {update.message.chat_id} ОТ ПОЛЬЗОВАТЕЛЯ {update.message.from_user.id if update.message.from_user else 'Неизвестно'} !!!")
+            try:
+                await update.message.reply_text(f"Тестовая команда из чата {update.message.chat_id} получена!")
+                print(f"!!! Ответ на /testchannel отправлен в чат {update.message.chat_id} !!!")
+            except Exception as e:
+                print(f"!!! Ошибка при ответе на /testchannel в чате {update.message.chat_id}: {e} !!!")
+
+        if TARGET_CHANNEL_ID: # Добавляем только если ID канала задан
+            # Важно: фильтр filters.Chat(chat_id=TARGET_CHANNEL_ID) должен быть точным
+            application.add_handler(CommandHandler("testchannel", test_channel_command, filters=filters.Chat(chat_id=TARGET_CHANNEL_ID)))
+            print(f"Добавлен тестовый обработчик /testchannel для чата (канала/группы) с ID: {TARGET_CHANNEL_ID}")
+        else:
+            print("Тестовый обработчик /testchannel НЕ добавлен, так как TARGET_CHANNEL_ID не задан.")
+
+        # Обработчик ошибок
+        application.add_error_handler(error_handler) # Убедитесь, что он есть
+
+        # Настройка ежедневной задачи
+        job_queue = application.job_queue
+        # ... (остальной код job_queue) ...
+
+        print("Запуск бота (polling)...")
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
     application.run_polling(allowed_updates=Update.ALL_TYPES) # Указываем, какие обновления получать
 
 if __name__ == '__main__':
