@@ -275,9 +275,9 @@ async def list_users_command(update: Update, context: CallbackContext):
         return
 
     message = "Пользователи, для которых будут отправляться предсказания (из known_users.json):\n"
-    for user_id_key, info in known_users_data.items(): # Используем user_id_key как ключ словаря
+    for user_id_key, info in known_users_data.items(): 
         name = f"@{info['username']}" if info.get('username') else info.get('first_name', f'User {info["id"]}')
-        message += f"- {name} (ID: {info['id']})\n" # Берем info['id'] для отображения
+        message += f"- {name} (ID: {info['id']})\n" 
     
     max_len = 4096
     for i in range(0, len(message), max_len):
@@ -318,14 +318,11 @@ async def error_handler(update: object, context: CallbackContext) -> None:
         except Exception as e:
             print(f"Не удалось отправить сообщение об ошибке администратору (обработка ошибки): {e}")
 
-# === НОВЫЙ ОБРАБОТЧИК ДЛЯ /ping В ЛС ===
 async def ping_command(update: Update, context: CallbackContext):
-    """Отвечает на команду /ping в личных сообщениях."""
     user = update.effective_user
     print(f"!!! ПОЛУЧЕНА КОМАНДА /ping от пользователя {user.id} ({user.first_name}) в ЛС !!!")
     await update.message.reply_text(f"Pong! Привет, {user.first_name}! Я жив.")
     print(f"!!! Ответ на /ping отправлен пользователю {user.id} !!!")
-# === КОНЕЦ НОВОГО ОБРАБОТЧИКА ===
 
 def main():
     print("Запуск main функции...")
@@ -340,12 +337,9 @@ def main():
     print("Создание экземпляра Application...")
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # --- РЕГИСТРАЦИЯ ОБРАБОТЧИКОВ ---
-    # Сначала обработчик для /ping в ЛС
-    application.add_handler(CommandHandler("ping", ping_command)) # Фильтры не нужны, по умолчанию для ЛС
+    application.add_handler(CommandHandler("ping", ping_command)) 
     print("Добавлен обработчик /ping для личных сообщений.")
 
-    # Затем остальные команды для ЛС
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("list_users", list_users_command))
@@ -354,18 +348,16 @@ def main():
 
 
     if TARGET_CHANNEL_ID:
-        # ОБРАБОТЧИК ОБЫЧНЫХ СООБЩЕНИЙ ИЗ ЦЕЛЕВОГО КАНАЛА/ГРУППЫ
         application.add_handler(MessageHandler(
             filters.Chat(chat_id=TARGET_CHANNEL_ID) & filters.TEXT & (~filters.COMMAND) & (~filters.UpdateType.EDITED_MESSAGE),
             store_user_from_channel_message
         ))
         print(f"Настроен обработчик store_user_from_channel_message для чата ID: {TARGET_CHANNEL_ID}")
 
-        # ТЕСТОВЫЙ ОБРАБОТЧИК КОМАНДЫ ДЛЯ КАНАЛА/ГРУППЫ
         async def test_channel_command(update: Update, context: CallbackContext):
             user_obj = update.message.from_user
             user_id_str = str(user_obj.id) if user_obj else "Неизвестно"
-            print(f"!!! ПОЛУЧЕНА КОМАНДА /testchannel В ЧАТЕ {update.message.chat_id} ОТ ПОЛЬЗОВАТЕЛЯ {user_id_str} !!!")
+            print(f"!!! ПОЛУЧЕНA КОМАНДА /testchannel В ЧАТЕ {update.message.chat_id} ОТ ПОЛЬЗОВАТЕЛЯ {user_id_str} !!!")
             try:
                 reply_text = f"Тестовая команда из чата {update.message.chat_id} получена!"
                 if user_obj:
