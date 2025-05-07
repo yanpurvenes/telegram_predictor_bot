@@ -1,5 +1,6 @@
 import telegram
-from telegram import Update, ParseMode
+from telegram import Update
+from telegram.constants import ParseMode # <--- ИЗМЕНЕНИЕ ЗДЕСЬ
 from telegram.ext import Application, CommandHandler, CallbackContext, MessageHandler, filters
 import os
 import json
